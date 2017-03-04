@@ -47,7 +47,7 @@ public class EmailAttachmentComponentImpl implements EmailAttachmentComponent {
         final List<String> attachmentUuids = new ArrayList<>();
         models.stream()
                 .filter(email -> email.getAttachments() != null && !email.getAttachments().isEmpty())
-                .forEach(email -> email.getAttachments().stream().forEach(attachmentModel -> attachmentUuids.add(attachmentModel.getUuid())));
+                .forEach(email -> email.getAttachments().forEach(attachmentModel -> attachmentUuids.add(attachmentModel.getUuid())));
         final List<StoredFileInfoModel> filesInfo = coolFsServiceCommunicator.getFileInfoByUuids(new GetFileInfoByUuidListRequest(attachmentUuids)).getResponse().getFilesInfo();
         for (EmailWithAttachmentsModel model : models) {
             if (model.getAttachments() == null || model.getAttachments().isEmpty()) {
@@ -55,9 +55,7 @@ public class EmailAttachmentComponentImpl implements EmailAttachmentComponent {
             }
             for (AttachmentModel attachmentModel : model.getAttachments()) {
                 final Optional<StoredFileInfoModel> fileInfo = filesInfo.stream().filter(info -> info.getUuid().equals(attachmentModel.getUuid())).findAny();
-                if (fileInfo.isPresent()) {
-                    attachmentModel.setName(fileInfo.get().getFileName());
-                }
+                fileInfo.ifPresent(storedFileInfoModel -> attachmentModel.setName(storedFileInfoModel.getFileName()));
             }
         }
         return models;
