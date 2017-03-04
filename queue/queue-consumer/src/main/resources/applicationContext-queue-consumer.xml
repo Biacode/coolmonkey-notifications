@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/rabbit
+        http://www.springframework.org/schema/rabbit/spring-rabbit.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <import resource="applicationContext-service-impl.xml"/>
+    <import resource="applicationContext-externalclients-coolfs.xml"/>
+
+    <bean id="connectionFactory"
+          class="org.springframework.amqp.rabbit.connection.CachingConnectionFactory">
+        <property name="host" value="#{appProperties['rabbit.settings.amqp.host']}"/>
+        <property name="port" value="#{appProperties['rabbit.settings.amqp.port']}"/>
+        <property name="username" value="#{appProperties['rabbit.settings.login']}"/>
+        <property name="password" value="#{appProperties['rabbit.settings.password']}"/>
+        <property name="channelCacheSize" value="#{appProperties['rabbit.settings.channel.cache.size']}"/>
+    </bean>
+
+    <rabbit:template
+            id="amqpTemplate"
+            connection-factory="connectionFactory"/>
+
+    <rabbit:admin connection-factory="connectionFactory"/>
+
+    <rabbit:queue
+            id="sendEmailQueue"
+            auto-delete="#{appProperties['rabbit.settings.queue.autodelete']}"
+            durable="true"
+            exclusive="false"
+            name="#{appProperties['queue.sendemail']}"/>
+
+    <bean id="rabbitListenerContainerFactory"
+          class="org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory">
+        <property name="connectionFactory" ref="connectionFactory"/>
+        <property name="concurrentConsumers" value="#{appProperties['rabbit.settings.concurrentconsumers']}"/>
+        <property name="maxConcurrentConsumers" value="#{appProperties['rabbit.settings.maxConcurrentconsumers']}"/>
+    </bean>
+
+    <rabbit:listener-container
+            connection-factory="connectionFactory"
+            acknowledge="auto"
+            concurrency="#{appProperties['rabbit.settings.concurrency']}"
+            requeue-rejected="false"
+    />
+
+    <context:component-scan base-package="com.sfl.coolmonkey.notifications.queue.consumer.*"/>
+
+    <rabbit:annotation-driven/>
+
+    <aop:aspectj-autoproxy/>
+
+    <context:annotation-config/>
+
+</beans>

@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <artifactId>queue</artifactId>
+        <groupId>com.sfl.coolmonkey.notifications.queue</groupId>
+        <version>0.1.0</version>
+    </parent>
+
+    <artifactId>queue-consumer</artifactId>
+    <version>0.1.0</version>
+    <packaging>war</packaging>
+
+    <properties>
+        <java.version>1.8</java.version>
+        <spring.rabbitmq.version>1.5.5.RELEASE</spring.rabbitmq.version>
+        <javax.ws.rs-api.version>2.0.1</javax.ws.rs-api.version>
+        <jackson.version>2.6.3</jackson.version>
+        <sendgrid.version>2.2.2</sendgrid.version>
+        <project.version>0.1.0</project.version>
+        <easymock.version>3.2</easymock.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.sfl.coolmonkey.notifications.queue</groupId>
+            <artifactId>queue-model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sfl.coolmonkey.notifications.service</groupId>
+            <artifactId>service-impl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.amqp</groupId>
+            <artifactId>spring-rabbit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.amqp</groupId>
+            <artifactId>spring-amqp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sendgrid</groupId>
+            <artifactId>sendgrid-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.sfl.coolmonkey.notifications.externalclients</groupId>
+            <artifactId>externalclients-coolfs</artifactId>
+        </dependency>
+    </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.sfl.coolmonkey.notifications.queue</groupId>
+                <artifactId>queue-model</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sfl.coolmonkey.notifications.service</groupId>
+                <artifactId>service-impl</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.amqp</groupId>
+                <artifactId>spring-rabbit</artifactId>
+                <version>${spring.rabbitmq.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.amqp</groupId>
+                <artifactId>spring-amqp</artifactId>
+                <version>${spring.rabbitmq.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sendgrid</groupId>
+                <artifactId>sendgrid-java</artifactId>
+                <version>${sendgrid.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sfl.coolmonkey.notifications.externalclients</groupId>
+                <artifactId>externalclients-coolfs</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <profiles>
+        <profile>
+            <id>docker</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-war-plugin</artifactId>
+                        <configuration>
+                            <warName>ROOT</warName>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>com.spotify</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <configuration>
+                            <registryUrl>${docker.registry.url}</registryUrl>
+                            <serverId>${docker.registry.url}</serverId>
+                            <pushImage>true</pushImage>
+                            <baseImage>tomcat:8.0-jre8</baseImage>
+                            <imageName>${docker.registry.url}/notificationsms-consumer</imageName>
+                            <maintainer>CoolMonkey Team</maintainer>
+                            <runs>
+                                <run>rm -rf /usr/local/tomcat/webapps/ROOT</run>
+                                <run>rm -rf /usr/local/tomcat/webapps/docs</run>
+                                <run>rm -rf /usr/local/tomcat/webapps/examples</run>
+                                <run>rm -rf /usr/local/tomcat/webapps/host-manager</run>
+                                <run>rm -rf /usr/local/tomcat/webapps/manager</run>
+                            </runs>
+                            <imageTags>
+                                <imageTag>latest</imageTag>
+                                <imageTag>${bamboo.deploy.release}</imageTag>
+                            </imageTags>
+                            <resources>
+                                <resource>
+                                    <targetPath>/usr/local/tomcat/webapps</targetPath>
+                                    <directory>${project.build.directory}/</directory>
+                                    <include>ROOT.war</include>
+                                </resource>
+                                <resource>
+                                    <targetPath>/root/coolmonkey/</targetPath>
+                                    <directory>
+                                        /opt/coolmonkey-docker/mount/app/notificationsms-consumer/${project.environment}/
+                                    </directory>
+                                    <include>*</include>
+                                </resource>
+                                <resource>
+                                    <targetPath>/root/coolmonkey/</targetPath>
+                                    <directory>/opt/coolmonkey-docker/mount/app/common/${project.environment}/
+                                    </directory>
+                                    <include>*</include>
+                                </resource>
+                                <resource>
+                                    <targetPath>/root/coolmonkey/</targetPath>
+                                    <directory>/opt/coolmonkey-docker/tools/newrelic/</directory>
+                                    <include>newrelic.jar</include>
+                                </resource>
+                            </resources>
+                            <exposes>8080</exposes>
+                            <entryPoint>["catalina.sh", "run"]</entryPoint>
+                        </configuration>
+                    </plugin>
+                </plugins>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-war-plugin</artifactId>
+                            <version>${maven.war.plugin.version}</version>
+                        </plugin>
+                        <plugin>
+                            <groupId>com.spotify</groupId>
+                            <artifactId>docker-maven-plugin</artifactId>
+                            <version>${docker.maven.plugin.version}</version>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
+    </profiles>
+
+</project>
